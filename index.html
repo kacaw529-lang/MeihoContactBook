@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>班級黑板 · 三年級數位聯絡簿</title>
+<script src="pinyin-pro.js"></script>
+<style>
+  :root{
+    --board:#2a5240; --board-deep:#1f3e30; --frame:#9a6536; --frame-light:#b78049;
+    --paper:#faf5ea; --card:#fff; --ink:#2f3a33; --muted:#7b857d;
+    --accent:#e07b39; --accent2:#3a8061; --chalk:#f3efe2; --chalk-soft:#cfe0d4;
+    --line:#e7e0cf; --danger:#c2553f; --radius:16px; --shadow:0 4px 18px rgba(60,50,30,.10);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"PingFang TC","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;
+    background:radial-gradient(circle at 12% 8%,#fff6e4 0,transparent 40%),
+      radial-gradient(circle at 90% 4%,#f1ead6 0,transparent 35%),var(--paper);
+    color:var(--ink);line-height:1.6;min-height:100vh;padding:16px 12px 70px}
+  .wrap{max-width:980px;margin:0 auto}
+  header.app-head{text-align:center;margin-bottom:12px}
+  .badge{display:inline-block;background:#fff;border:2px dashed var(--accent2);color:var(--accent2);
+    font-weight:700;padding:3px 16px;border-radius:999px;font-size:13px;margin-bottom:6px}
+  h1.title{font-size:clamp(24px,5vw,38px);font-weight:800;letter-spacing:1px;color:var(--accent2)}
+  h1.title b{color:var(--accent)}
+  .subtitle{color:var(--muted);font-size:14px;margin-top:2px}
+  .notice{background:#fff8ec;border:1px solid #f0dcae;border-radius:12px;padding:8px 14px;
+    font-size:12.5px;color:#8a6d3b;margin:10px 0;display:flex;gap:8px;align-items:flex-start}
+  .notice.warn{background:#fbeae6;border-color:#eecabf;color:#9a4a36}
+  .datebar{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;
+    background:var(--card);border-radius:14px;padding:10px;box-shadow:var(--shadow);margin-bottom:12px}
+  .datebar label{font-weight:700;color:var(--accent2)}
+  input[type=date]{font:inherit;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .nav-btn{border:none;background:#eef3ee;color:var(--accent2);font-weight:700;border-radius:8px;width:36px;height:36px;cursor:pointer;font-size:16px}
+  .today-btn{border:none;background:var(--accent2);color:#fff;font-weight:700;border-radius:8px;padding:7px 14px;cursor:pointer}
+  .weekday-pill{background:var(--accent);color:#fff;border-radius:999px;padding:2px 12px;font-weight:700;font-size:14px}
+  nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;justify-content:center;
+    position:sticky;top:0;z-index:50;padding:8px 0;background:linear-gradient(var(--paper) 85%,transparent)}
+  .tab{border:none;background:#fff;color:var(--ink);font-weight:700;font-size:14px;padding:10px 16px;
+    border-radius:999px;cursor:pointer;box-shadow:var(--shadow);min-height:42px}
+  .tab[aria-selected="true"]{background:var(--accent2);color:#fff}
+  .tab:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .panel{display:none}.panel.active{display:block}
+  #saveToast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:rgba(47,58,51,.92);
+    color:#fff;font-size:13.5px;font-weight:700;border-radius:999px;padding:8px 18px;z-index:99;
+    opacity:0;pointer-events:none;transition:opacity .25s}
+  #saveToast.show{opacity:1}
+  .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+  .card h2{font-size:17px;color:var(--accent2);display:flex;align-items:center;gap:8px;margin-bottom:10px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:120px}
+  .field label{font-size:12.5px;color:var(--muted);font-weight:600}
+  input[type=text],input[type=url],textarea,select{font:inherit;border:1px solid var(--line);
+    border-radius:10px;padding:9px 11px;background:#fdfcf8;width:100%}
+  textarea{resize:vertical;min-height:54px}
+  input:focus,textarea:focus{outline:none;border-color:var(--accent2);box-shadow:0 0 0 3px rgba(58,128,97,.15)}
+  .btn{border:none;border-radius:10px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap;min-height:42px}
+  .btn-add{background:var(--accent2);color:#fff}.btn-orange{background:var(--accent);color:#fff}
+  .btn-ghost{background:#eef3ee;color:var(--accent2)}
+  .item{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-top:8px;background:#fdfcf8}
+  .item .body{flex:1}.item .subj{font-weight:800;color:var(--accent2)}
+  .item .zh{font-size:12px;color:var(--accent);font-weight:700;cursor:pointer}
+  .del{border:none;background:#fbeae6;color:var(--danger);border-radius:8px;width:30px;height:30px;cursor:pointer;font-weight:800}
+  .thumb{width:60px;height:60px;border-radius:10px;object-fit:cover;border:2px solid var(--frame-light)}
+  .empty{color:var(--muted);font-size:14px;text-align:center;padding:14px;border:1px dashed var(--line);border-radius:12px;margin-top:8px}
+  .hint{font-size:12.5px;color:var(--muted);margin-top:8px}
+
+  /* === 直排黑板（由右而左） === */
+  .board-outer{background:linear-gradient(160deg,var(--frame-light),var(--frame));padding:14px;border-radius:18px;box-shadow:0 10px 30px rgba(60,40,20,.25)}
+  .board{background:radial-gradient(circle at 30% 20%,rgba(255,255,255,.04),transparent 60%),
+      linear-gradient(160deg,var(--board),var(--board-deep));border-radius:12px;padding:22px 20px;color:var(--chalk);position:relative;overflow:auto;
+      display:flex;justify-content:flex-end}
+  .fs-btn{position:absolute;top:12px;left:12px;background:rgba(0,0,0,.35);color:#fff;border:none;border-radius:8px;padding:7px 12px;font-weight:700;cursor:pointer;font-size:13px;z-index:2}
+  .vboard{display:flex;flex-direction:row-reverse;justify-content:flex-start;
+    gap:.55em;min-height:300px;align-items:flex-start}
+  .vcol{writing-mode:vertical-rl;text-orientation:upright;font-weight:700;
+    font-size:clamp(22px,4.4vw,34px);line-height:1.9;letter-spacing:.02em;white-space:nowrap}
+  .vcol.date{color:#ffe08a}
+  .vcol.reminder{color:#ffe08a;font-size:clamp(18px,3.4vw,26px)}
+  .vsep{width:2px;align-self:stretch;background:repeating-linear-gradient(to bottom,rgba(243,239,226,.4) 0 8px,transparent 8px 16px);margin:0 .25em}
+  /* ruby 注音：排在字右側，比例縮小；標點以空白 rt 置中 */
+  ruby{ruby-align:center;ruby-position:over}
+  rt{font-size:.3em;font-weight:600;color:var(--chalk-soft);letter-spacing:-.04em;line-height:1.05}
+  ruby.punc rt{color:transparent}
+  .vcol ruby{margin:.02em 0}
+  .lat{text-orientation:mixed;text-combine-upright:none;white-space:nowrap;letter-spacing:0}
+  .tcy{text-combine-upright:all;-webkit-text-combine:horizontal;text-orientation:mixed;font-weight:700}
+  .vidiom{display:flex;flex-direction:row-reverse;gap:14px;align-items:flex-start}
+  .vcol.idiom-word{font-size:clamp(26px,5vw,40px)}
+  .vcol.idiom-mean{font-size:clamp(18px,3.2vw,26px);color:var(--chalk-soft);white-space:normal;max-height:340px}
+  .vidiom img{width:108px;height:108px;object-fit:cover;border-radius:10px;border:3px solid rgba(243,239,226,.5);align-self:flex-start}
+
+  .link-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:14px;justify-items:center}
+  @media(min-width:600px){.link-grid{grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:20px}}
+  .link-tile{display:flex;flex-direction:column;align-items:center;gap:7px;text-decoration:none;color:var(--ink);width:100%;max-width:104px}
+  .link-tile .lt-ic{width:62px;height:62px;border-radius:16px;display:grid;place-items:center;font-size:30px;background:#fdf3e7;border:1px solid var(--line);box-shadow:var(--shadow);overflow:hidden;transition:transform .15s}
+  .link-tile .lt-ic img{width:100%;height:100%;object-fit:cover}
+  .link-tile:hover .lt-ic{transform:translateY(-3px)}
+  .link-tile .lt{font-weight:700;font-size:12.5px;color:var(--ink);text-align:center;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+  .link-tile .lu{display:none}
+  @media(min-width:600px){.link-tile .lt-ic{width:74px;height:74px;font-size:36px;border-radius:18px}.link-tile .lt{font-size:13.5px}}
+  .drag{cursor:grab;color:var(--muted);font-size:20px;padding:0 6px;align-self:center;touch-action:none;user-select:none;flex:none}
+  .drag:active{cursor:grabbing}
+  .sortable-ghost{opacity:.4}
+  .lk-edit-ic{width:46px;height:46px;flex:none;display:grid;place-items:center;font-size:24px;border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden}
+  .lk-edit-ic img{width:100%;height:100%;object-fit:cover}
+  .mini-act{display:inline-block;margin-top:6px;margin-right:8px;font-size:12px;font-weight:700;color:var(--accent2);cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 10px;background:#fff}
+  .mini-act:hover{background:#eef6f1}
+  .check-list{display:flex;flex-direction:column;gap:8px;margin:10px 0}
+  .check{display:flex;gap:10px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px;cursor:pointer;font-size:16px}
+  .check input{width:22px;height:22px;accent-color:var(--accent2)}
+  .check.done{background:#eef6f1;border-color:var(--accent2)}
+  .confirm{background:#eef6f1;border:1px solid var(--accent2);color:#2f6b50;border-radius:12px;padding:12px;font-weight:700;margin-top:10px}
+  .table-scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:14px;min-width:520px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:center}
+  th{background:#eef6f1;color:var(--accent2);font-weight:800}
+  td.name{font-weight:700;text-align:left;background:#fdfcf8}
+  .yes{color:var(--accent2);font-weight:800}.no{color:#cdd3cb}
+  input.audit,input.dashck{width:26px;height:26px;accent-color:var(--accent2);cursor:pointer}
+  .exempt{display:inline-block;background:#eef0f5;color:#5b6b8a;border:1px solid #cdd6e6;border-radius:6px;padding:1px 8px;font-size:14px;font-weight:800;cursor:pointer}
+  .exempt:hover{background:#e0e5f0}
+  .exempt-mini{display:inline-block;background:#eef0f5;color:#5b6b8a;border-radius:6px;padding:0 6px;font-size:12px;font-weight:700;margin-left:4px}
+  .exbtn{border:1px solid #cdd6e6;background:#fff;color:#5b6b8a;border-radius:8px;padding:5px 12px;font-weight:700;cursor:pointer;font-size:13px}
+  .exbtn:hover{background:#eef0f5}.exbtn:disabled{opacity:.5}
+  #trackTable th:first-child,#trackTable td.name{position:sticky;left:0;z-index:1}
+  .stat{display:inline-block;background:#fff8ec;border:1px solid #f0dcae;border-radius:999px;padding:3px 12px;font-size:13px;font-weight:700;color:#8a6d3b;margin:2px}
+  .spin{color:#cfe0d4;font-size:14px;text-align:center;padding:18px}
+  .zoombar{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin-bottom:8px;color:var(--muted);font-size:13px;font-weight:700}
+  .zbtn{border:none;background:#eef3ee;color:var(--accent2);font-weight:800;border-radius:8px;width:42px;height:34px;cursor:pointer;font-size:15px}
+  .zbtn:hover{background:#dde8df}
+  body.parent-mode .teacher-tab{display:none}
+  body.parent-mode .datebar .nav-btn,body.parent-mode .datebar .today-btn,body.parent-mode .datebar input{display:none}
+  body.parent-mode .subtitle,body.parent-mode #cfgNotice,body.parent-mode .datebar,body.parent-mode nav.tabs,body.parent-mode #boardHint{display:none}
+  .dchk{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap}
+  .dchk input{width:20px;height:20px;accent-color:var(--accent)}
+  .dbadge{display:inline-block;margin-left:8px;font-size:12px;font-weight:700;border-radius:999px;padding:2px 10px;cursor:pointer;border:1px solid var(--line)}
+  .dbadge.on{background:#fdf0e6;color:var(--accent);border-color:#f0cdb0}
+  .dbadge.off{background:#f3f5f2;color:var(--muted)}
+  footer{text-align:center;color:var(--muted);font-size:12.5px;margin-top:22px}
+  .board:fullscreen{align-items:center;justify-content:flex-end;padding:3vh 3vw}
+  .board:fullscreen .vboard{min-height:auto}
+  .board:fullscreen .vcol{font-size:6vh}.board:fullscreen .vcol.date{font-size:6.2vh}
+  .board:fullscreen .vcol.reminder{font-size:4.6vh}
+  .board:fullscreen .vcol.idiom-word{font-size:7vh}
+  .board:fullscreen .vcol.idiom-mean{font-size:4.2vh;max-height:80vh}
+  @media(max-width:520px){
+    body{padding:10px 8px 60px}
+    h1.title{font-size:22px}
+    header.app-head{margin-bottom:8px}
+    .badge{font-size:12px;padding:2px 12px}
+    .subtitle{font-size:12.5px}
+    .card{padding:13px;margin-bottom:10px}
+    .board{padding:16px 12px}
+    .datebar{padding:8px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="app-head">
+    <span class="badge">✦ 三年級數位聯絡簿 ✦</span>
+    <h1 class="title">班級黑板 · <b>電子聯絡簿</b></h1>
+    <p class="subtitle">直排注音 · 投影抄寫 · 家長手機可繳交</p>
+  </header>
+  <div id="cfgNotice"></div>
+  <div class="datebar">
+    <button class="nav-btn" id="prevDay">‹</button>
+    <label for="datePicker">日期</label>
+    <input type="date" id="datePicker">
+    <span class="weekday-pill" id="weekday">週三</span>
+    <button class="nav-btn" id="nextDay">›</button>
+    <button class="today-btn" id="todayBtn">今天</button>
+  </div>
+  <nav class="tabs" role="tablist">
+    <button class="tab teacher-tab" role="tab" data-tab="edit" aria-selected="false">✏️ 老師編輯</button>
+    <button class="tab" role="tab" data-tab="main" aria-selected="true">📋 聯絡簿</button>
+    <button class="tab teacher-tab" role="tab" data-tab="track" aria-selected="false">✅ 繳交登記表</button>
+    <button class="tab teacher-tab" role="tab" data-tab="dash" aria-selected="false">🗂️ 未補繳</button>
+  </nav>
+
+  <!-- 老師編輯 -->
+  <section class="panel" id="panel-edit">
+    <div class="card">
+      <h2>📚 今日功課項目</h2>
+      <div class="row">
+        <div class="field"><label>功課項目（直接寫整行，如：國語生字語詞）</label><input type="text" id="hwContent" placeholder="國語生字語詞"></div>
+        <label class="dchk" title="勾選後，此項才會開放家長／學生線上繳交"><input type="checkbox" id="hwDigital"> 數位作業</label>
+        <button class="btn btn-add" id="hwAdd">＋ 新增</button>
+      </div>
+      <p class="hint">注音自動產生（破音字與台灣讀音已處理）。若有錯，點清單裡的「注音 ✎」可手動修改。勾「數位作業」的項目才會出現在聯絡簿的數位作業繳交區。</p>
+      <div id="hwList"></div>
+      <div class="field" style="margin-top:12px"><label>今日叮嚀（選填，會以黃字顯示在黑板）</label><input type="text" id="hwReminder" placeholder="帶齊文具，認真完成作業喔！"></div>
+    </div>
+    <div class="card">
+      <h2>🀄 每日成語（可放照片）</h2>
+      <div class="row">
+        <div class="field" style="max-width:150px"><label>成語</label><input type="text" id="idText" placeholder="守株待兔"></div>
+        <div class="field"><label>解釋</label><input type="text" id="idMean" placeholder="比喻死守經驗、不知變通"></div>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div class="field"><label>照片（選填，自動縮圖）</label><input type="file" id="idPhoto" accept="image/*"></div>
+        <button class="btn btn-add" id="idAdd">＋ 新增成語</button>
+      </div>
+      <div id="idList"></div>
+    </div>
+    <div class="card">
+      <h2>🔗 教學常用超連結</h2>
+      <div class="row">
+        <div class="field" style="max-width:160px"><label>名稱</label><input type="text" id="lkTitle" placeholder="均一教育平台"></div>
+        <div class="field"><label>網址</label><input type="url" id="lkUrl" placeholder="https://..."></div>
+        <div class="field" style="max-width:170px"><label>圖示（選填，自動縮圖）</label><input type="file" id="lkIcon" accept="image/*"></div>
+        <button class="btn btn-add" id="lkAdd">＋ 新增</button>
+      </div>
+      <div id="lkListEdit"></div>
+    </div>
+    <div class="card">
+      <h2>📨 給家長的連結</h2>
+      <p class="hint" style="margin-top:0">複製此連結貼到班級群組。家長開啟後只看得到「聯絡簿」這一頁（含投影內容、連結與作業繳交），看不到編輯與登記表。</p>
+      <button class="btn btn-orange" id="copyParentLink" style="margin-top:8px">📋 複製家長連結</button>
+      <span id="copyMsg" class="hint"></span>
+    </div>
+  </section>
+
+  <!-- 聯絡簿（投影＋家長＋繳交 整合一頁） -->
+  <section class="panel active" id="panel-main">
+    <div class="zoombar">
+      <span>黑板字級</span>
+      <button class="zbtn" id="zoomOut" title="縮小">A−</button>
+      <span id="zoomLabel">100%</span>
+      <button class="zbtn" id="zoomIn" title="放大">A＋</button>
+    </div>
+    <div class="board-outer">
+      <div class="board" id="board">
+        <button class="fs-btn" id="fsBtn">⛶ 全螢幕</button>
+        <div class="vboard" id="vboard"><div class="spin">載入中…</div></div>
+      </div>
+    </div>
+    <p class="hint" id="boardHint" style="text-align:center">直排由右而左，貼近國語課本；投影時按全螢幕字會放大、內容靠右起排。</p>
+
+    <div class="card">
+      <h2>🔗 常用連結</h2>
+      <div class="link-grid" id="mainLinks"></div>
+    </div>
+
+    <div class="card" id="submitCard">
+      <h2>📤 數位作業繳交（在校或家長手機皆可）</h2>
+      <p class="hint" style="margin-top:0">完成作業後，填寫姓名、勾選已完成的項目送出。</p>
+      <div class="field" style="max-width:240px;margin-top:6px"><label>學生姓名（座號＋姓名）</label><input type="text" id="subName" placeholder="12 王小明"></div>
+      <div class="check-list" id="subChecks"></div>
+      <div class="row">
+        <div class="field"><label>想跟老師說的話（選填）</label><input type="text" id="subNote" placeholder="習作第3題不太懂"></div>
+        <div class="field"><label>作業照片（選填）</label><input type="file" id="subPhoto" accept="image/*"></div>
+      </div>
+      <button class="btn btn-orange" id="subSend" style="margin-top:10px">送出繳交紀錄</button>
+      <div id="subConfirm"></div>
+    </div>
+  </section>
+
+  <!-- 登記表 -->
+  <section class="panel" id="panel-track">
+    <div class="card">
+      <h2>✅ 作業繳交登記表</h2>
+      <p class="hint" style="margin-top:0">學藝股長點選方塊即可確認每位學生是否繳交，結果即時儲存。</p>
+      <div id="trackStats" style="margin-bottom:10px"></div>
+      <div class="table-scroll"><table id="trackTable"></table></div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn btn-ghost" id="importOnline">📥 套用學生線上繳交</button>
+        <button class="btn btn-add" id="exportCsv">⬇️ 匯出 CSV</button>
+        <button class="btn btn-ghost" id="refreshTrack">🔄 重新整理</button>
+      </div>
+      <p class="hint">「套用學生線上繳交」：把家長／學生透過聯絡簿頁線上送出的紀錄，自動勾選到上方表格；若有附作業照片，點學生姓名旁的 📷 即可檢視照片。資料同時存於 Google 試算表。</p>
+    </div>
+  </section>
+
+  <!-- 未補繳儀表板 -->
+  <section class="panel" id="panel-dash">
+    <div class="card">
+      <h2>🗂️ 未補繳作業儀表板</h2>
+      <div class="row">
+        <div class="field" style="max-width:160px"><label>起始日期</label><input type="date" id="dashFrom"></div>
+        <div class="field" style="max-width:160px"><label>結束日期</label><input type="date" id="dashTo"></div>
+        <button class="btn btn-ghost" id="dashRefresh">🔄 查詢</button>
+      </div>
+      <div id="dashStats" style="margin:12px 0"></div>
+      <div class="table-scroll"><table id="dashTable"></table></div>
+      <p class="hint">列出區間內每位學生尚未繳交的作業與日期。勾選「補繳完成」會即時寫回該日的繳交登記，往後查該日也會顯示完成。依目前座號名單比對。</p>
+    </div>
+  </section>
+
+  <footer>專為班級經營與每日溝通設計 · 讓聯絡簿更清楚，讓教學更省力</footer>
+</div>
+<div id="saveToast">☁️ 已儲存</div>
+
+<script>
+/* ============ 設定 ============ */
+const API_URL = "https://script.google.com/macros/s/AKfycbxiDCiTt2PKiVQJfWXj08-CVNh1pSTPoBUSLEd4kLLpYPIS-yxgNCow3N98OLKS-2ftgw/exec";   // 部署 Apps Script 後貼上 /exec 網址；留空＝本機暫存
+
+// 台灣教育部讀音覆寫（可自行增補；詞優先以免影響其他詞）
+const TW_DICT = {
+  '日期':'rì qí','星期':'xīng qí','學期':'xué qí','假期':'jià qí','時期':'shí qí',
+  '長期':'cháng qí','過期':'guò qí','定期':'dìng qí','預期':'yù qí','如期':'rú qí','延期':'yán qí',
+  '危險':'wéi xiǎn','危機':'wéi jī','危害':'wéi hài',
+  '休息':'xiū xí','消息':'xiāo xí','息':'xí',
+  '品質':'pǐn zhí','本質':'běn zhí','質量':'zhí liàng','性質':'xìng zhí',
+  '攻擊':'gōng jí','打擊':'dǎ jí','擊':'jí',
+  '究竟':'jiù jìng','法國':'fǎ guó','頭髮':'tóu fǎ'
+};
+
+/* ============ 自動注音 ============ */
+const ZH = (function(){
+  const INIT={b:'ㄅ',p:'ㄆ',m:'ㄇ',f:'ㄈ',d:'ㄉ',t:'ㄊ',n:'ㄋ',l:'ㄌ',g:'ㄍ',k:'ㄎ',h:'ㄏ',j:'ㄐ',q:'ㄑ',x:'ㄒ',zh:'ㄓ',ch:'ㄔ',sh:'ㄕ',r:'ㄖ',z:'ㄗ',c:'ㄘ',s:'ㄙ'};
+  const FIN={a:'ㄚ',o:'ㄛ',e:'ㄜ',ai:'ㄞ',ei:'ㄟ',ao:'ㄠ',ou:'ㄡ',an:'ㄢ',en:'ㄣ',ang:'ㄤ',eng:'ㄥ',er:'ㄦ',i:'ㄧ',ia:'ㄧㄚ',ie:'ㄧㄝ',iao:'ㄧㄠ',iu:'ㄧㄡ',iou:'ㄧㄡ',ian:'ㄧㄢ',in:'ㄧㄣ',iang:'ㄧㄤ',ing:'ㄧㄥ',iong:'ㄩㄥ',u:'ㄨ',ua:'ㄨㄚ',uo:'ㄨㄛ',uai:'ㄨㄞ',ui:'ㄨㄟ',uei:'ㄨㄟ',uan:'ㄨㄢ',un:'ㄨㄣ',uen:'ㄨㄣ',uang:'ㄨㄤ',ueng:'ㄨㄥ',ong:'ㄨㄥ',v:'ㄩ',ve:'ㄩㄝ',van:'ㄩㄢ',vn:'ㄩㄣ'};
+  const TONE={1:'',2:'ˊ',3:'ˇ',4:'ˋ',5:'˙',0:'˙'};
+  const WHOLE={zhi:'ㄓ',chi:'ㄔ',shi:'ㄕ',ri:'ㄖ',zi:'ㄗ',ci:'ㄘ',si:'ㄙ',yi:'ㄧ',ya:'ㄧㄚ',ye:'ㄧㄝ',yao:'ㄧㄠ',you:'ㄧㄡ',yan:'ㄧㄢ',yin:'ㄧㄣ',yang:'ㄧㄤ',ying:'ㄧㄥ',yong:'ㄩㄥ',wu:'ㄨ',wa:'ㄨㄚ',wo:'ㄨㄛ',wai:'ㄨㄞ',wei:'ㄨㄟ',wan:'ㄨㄢ',wen:'ㄨㄣ',wang:'ㄨㄤ',weng:'ㄨㄥ',yu:'ㄩ',yue:'ㄩㄝ',yuan:'ㄩㄢ',yun:'ㄩㄣ',er:'ㄦ'};
+  function syl(base,tone){
+    base=base.replace(/ü/g,'v'); const t=TONE[tone]||'';
+    if(WHOLE[base]) return WHOLE[base]+t;
+    let init='',rest=base;
+    if(/^(zh|ch|sh)/.test(base)){init=base.slice(0,2);rest=base.slice(2);}
+    else if(/^[bpmfdtnlgkhjqxrzcs]/.test(base)){init=base[0];rest=base.slice(1);}
+    if(/^[jqx]$/.test(init)&&rest[0]==='u') rest='v'+rest.slice(1);
+    return (INIT[init]||'')+(FIN[rest]||'')+t;
+  }
+  function annotate(text){
+    if(!text) return [];
+    if(!window.pinyinPro) return Array.from(text).map(ch=>({ch,zhuyin:null}));
+    try{
+      return window.pinyinPro.pinyin(text,{type:'all',toneType:'num',v:true}).map(o=>{
+        if(!/[\u4e00-\u9fff]/.test(o.origin)) return {ch:o.origin,zhuyin:null};
+        const m=String(o.pinyin).match(/^([a-zü]+)([0-5])?$/i);
+        return {ch:o.origin, zhuyin:m?syl(m[1].toLowerCase(),m[2]||1):''};
+      });
+    }catch(e){ return Array.from(text).map(ch=>({ch,zhuyin:null})); }
+  }
+  return {annotate};
+})();
+const VBRK={'(':'︵',')':'︶','（':'︵','）':'︶','[':'﹝',']':'﹞','〔':'﹝','〕':'﹞'};
+function rubyHTML(text, override){
+  const units=ZH.annotate(text);
+  const e=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const LAT=/[A-Za-z0-9.\-–—~～/\\×÷±+=%*#&@:;,'"]/;
+  let zi=-1,out='',lat='';
+  const flush=()=>{
+    if(!lat) return;
+    lat.split(/([-–—~～])/).forEach(p=>{
+      if(p==='') return;
+      if(/^[-–—~～]$/.test(p)) out+=`<ruby class="punc">︱<rt>　</rt></ruby>`;      // 範圍連接號（直線、置中）
+      else if(p.length<=6) out+=`<span class="tcy">${e(p)}</span>`;                  // 縱中橫：橫排壓成一個中文寬
+      else out+=`<span class="lat">${e(p)}</span>`;                                  // 太長則旋轉
+    });
+    lat='';
+  };
+  units.forEach(u=>{
+    if(u.zhuyin!==null){ // 中文字：加注音
+      flush(); zi++;
+      const z=(override&&override[zi]!=null&&override[zi]!=='')?override[zi]:u.zhuyin;
+      out+=`<ruby>${e(u.ch)}<rt>${e(z)}</rt></ruby>`;
+    }else{ // 非中文：逐字分類
+      for(const ch of String(u.ch)){
+        if(VBRK[ch]){ flush(); out+=`<ruby class="punc">${VBRK[ch]}<rt>　</rt></ruby>`; }
+        else if(LAT.test(ch)){ lat+=ch; }
+        else { flush(); out+=`<ruby class="punc">${e(ch)}<rt>　</rt></ruby>`; }
+      }
+    }
+  });
+  flush();
+  return out;
+}
+const plainZhuyin=text=>ZH.annotate(text).filter(u=>u.zhuyin).map(u=>u.zhuyin).join(' ');
+function mergeZh(h){
+  const units=ZH.annotate(h.text).filter(u=>u.zhuyin!==null);
+  return units.map((u,i)=>(h.zhuyin&&h.zhuyin[i])?h.zhuyin[i]:u.zhuyin).join(' ');
+}
+
+/* ============ 數字轉中文 ============ */
+function numCN(n){const d='零一二三四五六七八九';if(n<=10)return n===10?'十':d[n];if(n<20)return '十'+d[n-10];const t=Math.floor(n/10),o=n%10;return d[t]+'十'+(o?d[o]:'');}
+
+/* ============ 儲存層 ============ */
+const useApi=!!API_URL;
+function jsonp(params){return new Promise((resolve,reject)=>{const cb='cb_'+Date.now()+Math.floor(Math.random()*1e4);window[cb]=d=>{resolve(d);cleanup();};const s=document.createElement('script');s.src=API_URL+'?'+new URLSearchParams({...params,callback:cb}).toString();s.onerror=()=>{reject(new Error('連線失敗'));cleanup();};function cleanup(){delete window[cb];s.remove();}document.body.appendChild(s);setTimeout(()=>{if(window[cb]){reject(new Error('逾時'));cleanup();}},15000);});}
+async function apiPost(payload){await fetch(API_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});}
+const LS={get:k=>{try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set:(k,v)=>localStorage.setItem(k,JSON.stringify(v))};
+async function loadData(date){
+  if(useApi){try{return await jsonp({action:'load',date});}catch(e){return {homework:[],idioms:[],reminder:'',links:LS.get('cb:links')||[],submissions:[],roster:LS.get('cb:roster')||DEFAULT_ROSTER.slice(),audit:LS.get('cb:audit:'+date)||{}};}}
+  const o=LS.get('cb:'+date)||{};
+  return {homework:o.homework||[],idioms:o.idioms||[],reminder:o.reminder||'',links:LS.get('cb:links')||[],submissions:LS.get('cb:sub:'+date)||[],roster:LS.get('cb:roster')||DEFAULT_ROSTER.slice(),audit:LS.get('cb:audit:'+date)||{}};
+}
+let toastTimer=null;
+function toast(msg,keep){const t=document.getElementById('saveToast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);if(!keep)toastTimer=setTimeout(()=>t.classList.remove('show'),1600);}
+async function withSave(fn){toast('☁️ 儲存中…',true);try{await fn();toast('✅ 已儲存');}catch(e){toast('⚠️ 儲存失敗，請檢查網路');}}
+async function saveDay(){const body={homework:day.homework,idioms:day.idioms,reminder:day.reminder};await withSave(async()=>{if(useApi)await apiPost({action:'saveDay',date:currentDate,...body});else LS.set('cb:'+currentDate,body);});}
+async function saveLinks(){await withSave(async()=>{if(useApi)await apiPost({action:'saveLinks',links});else LS.set('cb:links',links);});}
+async function saveRoster(){if(useApi)await apiPost({action:'saveRoster',roster});else LS.set('cb:roster',roster);}
+async function saveAuditDate(date,a){await withSave(async()=>{if(useApi)await apiPost({action:'saveAudit',date,audit:a});else LS.set('cb:audit:'+date,a);});}
+async function saveAudit(){await saveAuditDate(currentDate,audit);}
+async function submitWork(rec){if(useApi)await apiPost({action:'submit',date:currentDate,...rec});else{const a=LS.get('cb:sub:'+currentDate)||[];a.push({...rec,ts:Date.now()});LS.set('cb:sub:'+currentDate,a);}}
+
+/* ============ 狀態 ============ */
+const DEFAULT_ROSTER=['1號','2號','3號','4號','5號','6號'];
+let currentDate=todayISO(),day={homework:[],idioms:[],reminder:''},links=[],subs=[],roster=DEFAULT_ROSTER.slice(),audit={},dash={roster:[],days:[]};
+let zoom=(()=>{try{return parseFloat(localStorage.getItem('cb:zoom'))||1;}catch(e){return 1;}})();
+function isBoardFs(){return document.fullscreenElement===document.getElementById('board');}
+function applyZoom(){const v=document.getElementById('vboard');if(v)v.style.zoom=zoom;const l=document.getElementById('zoomLabel');if(l)l.textContent=Math.round(zoom*100)+'%';try{localStorage.setItem('cb:zoom',zoom);}catch(e){}}
+function fitBoard(){
+  const board=document.getElementById('board'),v=document.getElementById('vboard');if(!board||!v)return;
+  v.style.zoom=1;
+  requestAnimationFrame(()=>{
+    const cs=getComputedStyle(board);
+    const aw=board.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight);
+    const ah=board.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);
+    const sw=v.scrollWidth,sh=v.scrollHeight;
+    if(sw>0&&sh>0){ v.style.zoom=Math.min(1, aw/sw, ah/sh); }
+  });
+}
+function setBoardZoom(){ if(isBoardFs()) fitBoard(); else applyZoom(); }
+function todayISO(){const d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10);}
+const WD=['日','一','二','三','四','五','六'];
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function driveImg(u){if(!u)return u;const m=String(u).match(/[?&]id=([-\w]+)/)||String(u).match(/\/file\/d\/([-\w]+)/);return m?('https://drive.google.com/thumbnail?id='+m[1]+'&sz=w1000'):u;}
+const weekday=iso=>WD[new Date(iso+'T00:00:00').getDay()];
+function dateCN(iso){const[y,m,d]=iso.split('-').map(Number);return `日期：${numCN(m)}月${numCN(d)}日（${weekday(iso)}）`;}
+function resizeImage(file,maxDim=720,q=.72){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{let{width:w,height:h}=img;if(w>h&&w>maxDim){h=Math.round(h*maxDim/w);w=maxDim;}else if(h>maxDim){w=Math.round(w*maxDim/h);h=maxDim;}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',q));};img.onerror=rej;img.src=r.result;};r.onerror=rej;r.readAsDataURL(file);});}
+async function refresh(){const d=await loadData(currentDate);day={homework:d.homework||[],idioms:d.idioms||[],reminder:d.reminder||''};links=d.links||[];subs=d.submissions||[];roster=(d.roster&&d.roster.length)?d.roster:DEFAULT_ROSTER.slice();audit=d.audit||{};renderAll();}
+
+/* ============ 渲染：黑板 ============ */
+function buildVColumns(target,withReminder){
+  let cols=`<div class="vcol date">${rubyHTML(dateCN(currentDate))}</div>`;
+  if(day.homework.length){
+    cols+=day.homework.map(h=>`<div class="vcol">${rubyHTML(h.text,h.zhuyin)}</div>`).join('');
+  }else cols+=`<div class="vcol" style="opacity:.6">${rubyHTML('今日尚未填寫功課')}</div>`;
+  if(withReminder&&day.reminder) cols+=`<div class="vsep"></div><div class="vcol reminder">${rubyHTML('叮嚀：'+day.reminder)}</div>`;
+  if(day.idioms.length){
+    cols+=`<div class="vsep"></div>`+day.idioms.map(i=>`<div class="vidiom"><div class="vcol idiom-word">${rubyHTML(i.text)}</div>${i.mean?`<div class="vcol idiom-mean">${rubyHTML(i.mean)}</div>`:''}${i.photo?`<img src="${esc(driveImg(i.photo))}" alt="${esc(i.text)}">`:''}</div>`).join('');
+  }
+  target.innerHTML=cols;
+}
+
+/* ============ 渲染：老師清單 ============ */
+function renderHwList(){
+  const el=document.getElementById('hwList');
+  el.innerHTML=day.homework.length?day.homework.map(h=>`<div class="item"><div class="body">${esc(h.text)}<span class="dbadge ${h.digital?'on':'off'}" data-toggle-digital="${h.id}" title="切換是否開放線上繳交">${h.digital?'📱 數位作業':'設為數位'}</span><div class="zh" data-edit-zh="${h.id}" title="點我修改注音">注音：${esc((h.zhuyin&&Object.keys(h.zhuyin).length)?mergeZh(h):plainZhuyin(h.text))} ✎</div></div><button class="del" data-del-hw="${h.id}">✕</button></div>`).join(''):'<div class="empty">尚未新增功課</div>';
+  const r=document.getElementById('hwReminder'); if(r&&document.activeElement!==r) r.value=day.reminder||'';
+}
+function renderIdList(){
+  const el=document.getElementById('idList');
+  el.innerHTML=day.idioms.length?day.idioms.map(i=>`<div class="item">${i.photo?`<img class="thumb" src="${esc(driveImg(i.photo))}">`:''}<div class="body"><span class="subj">${esc(i.text)}</span> <span class="zh">${esc(plainZhuyin(i.text))}</span><div>${esc(i.mean||'')}</div></div><button class="del" data-del-id="${i.id}">✕</button></div>`).join(''):'<div class="empty">尚未新增成語</div>';
+}
+let lkSortable=null;
+function renderLkEdit(){
+  const el=document.getElementById('lkListEdit');
+  el.innerHTML=links.length?links.map(l=>`<div class="item" data-lk="${l.id}"><span class="drag" title="拖曳排序">≡</span><div class="lk-edit-ic">${l.icon?`<img src="${esc(driveImg(l.icon))}" alt="">`:'🔗'}</div><div class="body"><span class="subj">${esc(l.title)}</span><div style="font-size:13px;color:var(--muted);word-break:break-all">${esc(l.url)}</div><label class="mini-act">${l.icon?'換圖':'上傳圖示'}<input type="file" data-icon-lk="${l.id}" accept="image/*" style="display:none"></label>${l.icon?`<span class="mini-act" data-rmicon-lk="${l.id}">移除圖示</span>`:''}</div><button class="del" data-del-lk="${l.id}">✕</button></div>`).join(''):'<div class="empty">尚未新增連結</div>';
+  if(lkSortable){try{lkSortable.destroy();}catch(e){}lkSortable=null;}
+  if(window.Sortable&&links.length){
+    lkSortable=new Sortable(el,{handle:'.drag',animation:150,ghostClass:'sortable-ghost',onEnd:async evt=>{
+      if(evt.oldIndex===evt.newIndex)return;
+      const moved=links.splice(evt.oldIndex,1)[0];links.splice(evt.newIndex,0,moved);
+      await saveLinks();renderAll();
+    }});
+  }
+}
+
+/* ============ 渲染：聯絡簿頁 ============ */
+function renderMain(){
+  buildVColumns(document.getElementById('vboard'),true);
+  setBoardZoom();
+  const pl=document.getElementById('mainLinks');
+  pl.innerHTML=links.length?links.map(l=>`<a class="link-tile" href="${esc(l.url)}" target="_blank" rel="noopener"><div class="lt-ic">${l.icon?`<img src="${esc(driveImg(l.icon))}" alt="">`:'🔗'}</div><span class="lt">${esc(l.title)}</span><span class="lu">${esc(l.url)}</span></a>`).join(''):'<div class="empty">尚未新增連結</div>';
+  const digitalItems=day.homework.filter(h=>h.digital);
+  const card=document.getElementById('submitCard');if(card)card.style.display=digitalItems.length?'':'none';
+  const box=document.getElementById('subChecks');
+  box.innerHTML=digitalItems.length?digitalItems.map(h=>`<label class="check"><input type="checkbox" data-hwid="${h.id}"><span>${esc(h.text)}</span></label>`).join(''):'<div class="empty">今日無數位作業</div>';
+  box.querySelectorAll('.check input').forEach(cb=>cb.addEventListener('change',e=>e.target.closest('.check').classList.toggle('done',e.target.checked)));
+}
+
+/* ============ 渲染：稽核登記表 ============ */
+function rosterAudit(name){return audit[name]||{};}
+function latestSubs(){const l={};subs.forEach(s=>{if(!l[s.student]||s.ts>l[s.student].ts)l[s.student]=s;});return l;}
+function matchOnline(name){const ls=latestSubs();for(const k in ls){if(k===name||k.indexOf(name)>=0||name.indexOf(k)>=0)return ls[k];}return null;}
+function renderRoster(){}
+function renderTrack(){
+  const items=day.homework,stats=document.getElementById('trackStats'),tbl=document.getElementById('trackTable');
+  if(!roster.length){stats.innerHTML='';tbl.innerHTML='<div class="empty">尚未設定座號名單（到「老師編輯」設定）</div>';return;}
+  if(!items.length){stats.innerHTML='';tbl.innerHTML='<div class="empty">今日尚未出功課</div>';return;}
+  let head='<tr><th>學生</th>'+items.map(i=>`<th>${esc(i.text)}</th>`).join('')+'<th>已交</th></tr>';
+  let rows=roster.map(name=>{
+    const a=rosterAudit(name),on=matchOnline(name);let done=0,exempt=0;
+    const cells=items.map(i=>{const v=a[i.id];
+      if(v===true){done++;return `<td><input type="checkbox" class="audit" data-stu="${esc(name)}" data-item="${i.id}" checked></td>`;}
+      if(v==='exempt'){exempt++;return `<td><span class="exempt" data-stu="${esc(name)}" data-item="${i.id}" title="免繳（點此取消）">免</span></td>`;}
+      return `<td><input type="checkbox" class="audit" data-stu="${esc(name)}" data-item="${i.id}"></td>`;}).join('');
+    return `<tr><td class="name">${esc(name)}${on?(on.photo?` <a href="${esc(driveImg(on.photo))}" target="_blank" rel="noopener" title="檢視線上繳交照片">📷</a>`:' <span title="已線上送出">🟢</span>'):''}</td>${cells}<td><b>${done}/${items.length}</b>${exempt?` <span class="exempt-mini">免${exempt}</span>`:''}</td></tr>`;
+  }).join('');
+  tbl.innerHTML=head+rows;
+  const per=items.map(i=>roster.filter(n=>rosterAudit(n)[i.id]===true).length);
+  const exPer=items.map(i=>roster.filter(n=>rosterAudit(n)[i.id]==='exempt').length);
+  const unfinished=roster.filter(n=>items.some(i=>{const v=rosterAudit(n)[i.id];return v!==true&&v!=='exempt';}));
+  stats.innerHTML=items.map((i,idx)=>`<span class="stat">${esc(i.text)} ${per[idx]}/${roster.length}${exPer[idx]?`（免${exPer[idx]}）`:''}</span>`).join('')
+    +(unfinished.length?`<span class="stat" style="background:#fbeae6;border-color:#eecabf;color:#9a4a36">未交齊：${unfinished.map(esc).join('、')}</span>`
+      :`<span class="stat" style="background:#eef6f1;border-color:var(--accent2);color:#2f6b50">全班交齊 🎉</span>`);
+}
+function renderAll(){renderHwList();renderIdList();renderLkEdit();renderRoster();renderMain();renderTrack();}
+
+/* ============ 未補繳儀表板 ============ */
+const dateShort=iso=>{const[y,m,d]=iso.split('-').map(Number);return `${m}/${d}（${weekday(iso)}）`;};
+async function loadRangeData(from,to){
+  if(useApi){try{return await jsonp({action:'range',from,to});}catch(e){return {roster:roster,days:[]};}}
+  const r=LS.get('cb:roster')||DEFAULT_ROSTER.slice(),days=[];
+  for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i),mm=k&&k.match(/^cb:(\d{4}-\d{2}-\d{2})$/);if(mm){const d=mm[1];if((!from||d>=from)&&(!to||d<=to)){const dd=LS.get(k)||{};if((dd.homework||[]).length)days.push({date:d,homework:dd.homework.map(h=>({id:h.id,text:h.text})),audit:LS.get('cb:audit:'+d)||{}});}}}
+  days.sort((a,b)=>a.date.localeCompare(b.date));
+  return {roster:r,days};
+}
+function computeOutstanding(){
+  const out=[],list=(dash.roster&&dash.roster.length)?dash.roster:roster;
+  (dash.days||[]).forEach(d=>{const items=d.homework||[];list.forEach(stu=>{const a=(d.audit&&d.audit[stu])||{};items.forEach(it=>{if(!a[it.id])out.push({date:d.date,student:stu,itemId:it.id,text:it.text});});});});
+  return out;
+}
+async function loadDashboard(){
+  const st=document.getElementById('dashStats'),tbl=document.getElementById('dashTable');
+  st.innerHTML='<span class="spin" style="color:var(--muted)">查詢中…</span>';tbl.innerHTML='';
+  dash=await loadRangeData(dashFrom.value,dashTo.value);
+  renderDashboard();
+}
+function renderDashboard(){
+  const st=document.getElementById('dashStats'),tbl=document.getElementById('dashTable');
+  const out=computeOutstanding();
+  if(!out.length){st.innerHTML='<span class="stat" style="background:#eef6f1;border-color:var(--accent2);color:#2f6b50">這段期間沒有未補繳的作業 🎉</span>';tbl.innerHTML='';return;}
+  out.sort((a,b)=>String(a.student).localeCompare(String(b.student),'zh-Hant')||a.date.localeCompare(b.date));
+  const studs=new Set(out.map(o=>o.student));
+  st.innerHTML=`<span class="stat" style="background:#fbeae6;border-color:#eecabf;color:#9a4a36">未補繳 ${out.length} 筆</span><span class="stat">涉及 ${studs.size} 位學生</span>`;
+  let head='<tr><th>學生</th><th>日期</th><th>未繳作業</th><th>補繳完成</th><th>免繳</th></tr>';
+  let rows=out.map(o=>`<tr><td class="name">${esc(o.student)}</td><td>${esc(dateShort(o.date))}</td><td>${esc(o.text)}</td><td><input type="checkbox" class="dashck" data-date="${o.date}" data-stu="${esc(o.student)}" data-item="${o.itemId}"></td><td><button class="exbtn" data-date="${o.date}" data-stu="${esc(o.student)}" data-item="${o.itemId}">免繳</button></td></tr>`).join('');
+  tbl.innerHTML=head+rows;
+}
+
+/* ============ 事件 ============ */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected','false'));document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));t.setAttribute('aria-selected','true');document.getElementById('panel-'+t.dataset.tab).classList.add('active');if(t.dataset.tab==='dash')loadDashboard();}));
+const dp=document.getElementById('datePicker');
+function setDate(iso){currentDate=iso;dp.value=iso;document.getElementById('weekday').textContent='週'+weekday(iso);refresh();}
+dp.addEventListener('change',e=>setDate(e.target.value));
+document.getElementById('todayBtn').addEventListener('click',()=>setDate(todayISO()));
+function shift(n){const d=new Date(currentDate+'T00:00:00');d.setDate(d.getDate()+n);d.setMinutes(d.getMinutes()-d.getTimezoneOffset());setDate(d.toISOString().slice(0,10));}
+document.getElementById('prevDay').onclick=()=>shift(-1);
+document.getElementById('nextDay').onclick=()=>shift(1);
+// Enter 快速新增
+[['hwContent','hwAdd'],['idMean','idAdd'],['lkUrl','lkAdd']].forEach(([inp,btn])=>{
+  const el=document.getElementById(inp);
+  if(el)el.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();document.getElementById(btn).click();}});
+});
+document.getElementById('hwAdd').onclick=async()=>{const c=hwContent.value.trim();if(!c){alert('請填寫功課項目');return;}day.homework.push({id:uid(),text:c,digital:document.getElementById('hwDigital').checked,zhuyin:{}});await saveDay();hwContent.value='';document.getElementById('hwDigital').checked=false;renderAll();};
+document.getElementById('hwReminder').addEventListener('change',async e=>{day.reminder=e.target.value.trim();await saveDay();renderMain();});
+document.getElementById('idAdd').onclick=async()=>{const t=idText.value.trim(),m=idMean.value.trim(),f=idPhoto.files[0];if(!t){alert('請填寫成語');return;}let photo='';if(f){try{photo=await resizeImage(f);}catch(e){}}day.idioms.push({id:uid(),text:t,mean:m,photo});await saveDay();idText.value='';idMean.value='';idPhoto.value='';renderAll();};
+document.getElementById('lkAdd').onclick=async()=>{const t=lkTitle.value.trim();let u=lkUrl.value.trim();if(!t||!u){alert('請填寫名稱與網址');return;}if(!/^https?:\/\//i.test(u))u='https://'+u;const f=document.getElementById('lkIcon').files[0];let icon='';if(f){try{icon=await resizeImage(f,128,.82);}catch(e){}}links.push({id:uid(),title:t,url:u,icon});await saveLinks();lkTitle.value='';lkUrl.value='';document.getElementById('lkIcon').value='';renderAll();};
+document.body.addEventListener('change',async e=>{const f=e.target.closest('input[data-icon-lk]');if(!f||!f.files[0])return;const l=links.find(x=>x.id===f.dataset.iconLk);if(!l)return;try{l.icon=await resizeImage(f.files[0],128,.82);}catch(err){}await saveLinks();renderAll();});
+document.body.addEventListener('click',async e=>{const b=e.target.closest('[data-del-hw],[data-del-id],[data-del-lk],[data-edit-zh],[data-toggle-digital],[data-rmicon-lk]');if(!b)return;if(b.dataset.delHw){day.homework=day.homework.filter(x=>x.id!==b.dataset.delHw);await saveDay();renderAll();}if(b.dataset.delId){day.idioms=day.idioms.filter(x=>x.id!==b.dataset.delId);await saveDay();renderAll();}if(b.dataset.delLk){links=links.filter(x=>x.id!==b.dataset.delLk);await saveLinks();renderAll();}if(b.dataset.rmiconLk){const l=links.find(x=>x.id===b.dataset.rmiconLk);if(l){l.icon='';await saveLinks();renderAll();}}if(b.dataset.toggleDigital){const h=day.homework.find(x=>x.id===b.dataset.toggleDigital);if(h){h.digital=!h.digital;await saveDay();renderAll();}}if(b.dataset.editZh){const h=day.homework.find(x=>x.id===b.dataset.editZh);if(!h)return;const val=prompt('修改注音（以空白分隔每個字，標點免填）：',mergeZh(h));if(val!==null){const arr=val.trim().split(/\s+/);h.zhuyin={};arr.forEach((z,i)=>h.zhuyin[i]=z);await saveDay();renderAll();}}});
+document.getElementById('fsBtn').onclick=()=>{const el=document.getElementById('board');if(!document.fullscreenElement)(el.requestFullscreen||el.webkitRequestFullscreen).call(el);else document.exitFullscreen();};
+document.addEventListener('fullscreenchange',setBoardZoom);
+window.addEventListener('resize',()=>{if(isBoardFs())fitBoard();});
+document.getElementById('zoomIn').onclick=()=>{zoom=Math.min(2.5,Math.round((zoom+0.1)*10)/10);applyZoom();};
+document.getElementById('zoomOut').onclick=()=>{zoom=Math.max(0.6,Math.round((zoom-0.1)*10)/10);applyZoom();};
+document.getElementById('subSend').onclick=async()=>{const name=subName.value.trim();if(!name){alert('請先填寫姓名');return;}const done={};document.querySelectorAll('#subChecks .check input:checked').forEach(cb=>done[cb.dataset.hwid]=true);const note=subNote.value.trim();const f=subPhoto.files[0];let photo='';if(f){try{photo=await resizeImage(f,900,.7);}catch(e){}}const btn=document.getElementById('subSend');btn.disabled=true;try{await submitWork({student:name,done,note,photo});}catch(e){}btn.disabled=false;document.getElementById('subConfirm').innerHTML='<div class="confirm">✅ '+esc(name)+'，已收到繳交紀錄！</div>';subName.value='';subNote.value='';subPhoto.value='';document.querySelectorAll('#subChecks .check').forEach(c=>{c.classList.remove('done');c.querySelector('input').checked=false;});if(!useApi)refresh();};
+document.getElementById('exportCsv').onclick=()=>{const items=day.homework;const header=['學生',...items.map(i=>i.text),'已交數'];const rows=roster.map(name=>{const a=rosterAudit(name);let d=0;const c=items.map(i=>{const v=a[i.id];if(v===true){d++;return '✓';}if(v==='exempt')return '免';return '';});return [name,...c,d+'/'+items.length];});const csv=[header,...rows].map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`作業繳交登記表_${currentDate}.csv`;a.click();URL.revokeObjectURL(a.href);};
+document.getElementById('refreshTrack').onclick=refresh;
+document.getElementById('trackTable').addEventListener('change',async e=>{const cb=e.target.closest('.audit');if(!cb)return;const stu=cb.dataset.stu,item=cb.dataset.item;if(!audit[stu])audit[stu]={};if(cb.checked)audit[stu][item]=true;else delete audit[stu][item];await saveAudit();renderTrack();});
+document.getElementById('trackTable').addEventListener('click',async e=>{const b=e.target.closest('.exempt');if(!b)return;const stu=b.dataset.stu,item=b.dataset.item;if(audit[stu])delete audit[stu][item];await saveAudit();renderTrack();});
+document.getElementById('importOnline').onclick=async()=>{roster.forEach(name=>{const on=matchOnline(name);if(on&&on.done){audit[name]=audit[name]||{};Object.keys(on.done).forEach(id=>{if(on.done[id])audit[name][id]=true;});}});await saveAudit();renderTrack();};
+document.getElementById('dashRefresh').onclick=loadDashboard;
+async function resolveDash(date,stu,item,value){const d=(dash.days||[]).find(x=>x.date===date);if(!d)return;d.audit=d.audit||{};d.audit[stu]=d.audit[stu]||{};d.audit[stu][item]=value;await saveAuditDate(date,d.audit);if(date===currentDate){audit=d.audit;renderTrack();}renderDashboard();}
+document.getElementById('dashTable').addEventListener('change',async e=>{const cb=e.target.closest('.dashck');if(!cb)return;cb.disabled=true;await resolveDash(cb.dataset.date,cb.dataset.stu,cb.dataset.item,true);});
+document.getElementById('dashTable').addEventListener('click',async e=>{const b=e.target.closest('.exbtn');if(!b)return;b.disabled=true;await resolveDash(b.dataset.date,b.dataset.stu,b.dataset.item,'exempt');});
+document.getElementById('copyParentLink').onclick=async()=>{const url=location.href.split('#')[0]+'#parent';const m=document.getElementById('copyMsg');try{await navigator.clipboard.writeText(url);m.textContent='✓ 已複製';}catch(e){m.textContent='請手動複製：'+url;}};
+function applyParentMode(){if(location.hash==='#parent'){document.body.classList.add('parent-mode');}}
+
+/* ============ 啟動 ============ */
+(function init(){
+  if(window.pinyinPro&&window.pinyinPro.customPinyin){try{window.pinyinPro.customPinyin(TW_DICT);}catch(e){}}
+  dp.value=currentDate;document.getElementById('weekday').textContent='週'+weekday(currentDate);
+  (function(){const t=todayISO();document.getElementById('dashTo').value=t;const f=new Date(t+'T00:00:00');f.setDate(f.getDate()-45);f.setMinutes(f.getMinutes()-f.getTimezoneOffset());document.getElementById('dashFrom').value=f.toISOString().slice(0,10);})();
+  const cn=document.getElementById('cfgNotice');
+  if(!useApi)cn.innerHTML='<div class="notice warn"><span>⚙️</span><span>尚未設定 Google 試算表後端，資料暫存在本機瀏覽器（測試用）。部署 Apps Script 後，把網址填入程式最上方的 <b>API_URL</b>。</span></div>';
+  else cn.innerHTML='<div class="notice"><span>☁️</span><span>資料儲存於班級 Google 試算表，多裝置同步。</span></div>';
+  applyParentMode();refresh();
+  if(location.hash!=='#parent'){var sc=document.createElement('script');sc.src='sortable.min.js';sc.onload=function(){renderLkEdit();};document.head.appendChild(sc);}
+})();
+</script>
+</body>
+</html>

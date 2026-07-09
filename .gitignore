@@ -1,0 +1,13 @@
+# 系統與編輯器
+.DS_Store
+Thumbs.db
+*.swp
+.vscode/
+.idea/
+
+# 相依套件（本專案函式庫已直接入庫，無需 node_modules）
+node_modules/
+
+# 備份檔
+*_backup.*
+*.bak
