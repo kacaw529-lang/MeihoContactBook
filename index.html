@@ -570,7 +570,15 @@ async function resolveDash(date,stu,item,value){const d=(dash.days||[]).find(x=>
 document.getElementById('dashTable').addEventListener('change',async e=>{const cb=e.target.closest('.dashck');if(!cb)return;cb.disabled=true;await resolveDash(cb.dataset.date,cb.dataset.stu,cb.dataset.item,true);});
 document.getElementById('dashTable').addEventListener('click',async e=>{const b=e.target.closest('.exbtn');if(!b)return;b.disabled=true;await resolveDash(b.dataset.date,b.dataset.stu,b.dataset.item,'exempt');});
 document.getElementById('copyParentLink').onclick=async()=>{const url=location.href.split('#')[0]+'#parent';const m=document.getElementById('copyMsg');try{await navigator.clipboard.writeText(url);m.textContent='✓ 已複製';}catch(e){m.textContent='請手動複製：'+url;}};
-function applyParentMode(){if(location.hash==='#parent'){document.body.classList.add('parent-mode');}}
+function applyParentMode(){
+  if(location.hash==='#parent'){
+    document.body.classList.add('parent-mode');
+    setInterval(refresh, 5*60*1000);                                  // 每 5 分鐘自動更新
+    document.addEventListener('visibilitychange',()=>{                 // 切回頁面即更新
+      if(document.visibilityState==='visible') refresh();
+    });
+  }
+}
 
 /* ============ 啟動 ============ */
 (function init(){
