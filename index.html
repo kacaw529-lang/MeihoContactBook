@@ -389,10 +389,12 @@ async function loadData(date){
 let toastTimer=null;
 function toast(msg,keep){const t=document.getElementById('saveToast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);if(!keep)toastTimer=setTimeout(()=>t.classList.remove('show'),1600);}
 async function withSave(fn){toast('☁️ 儲存中…',true);try{await fn();toast('✅ 已儲存');}catch(e){toast('⚠️ 儲存失敗，請檢查網路');}}
-async function saveDay(){const body={homework:day.homework,idioms:day.idioms,reminder:day.reminder};await withSave(async()=>{if(useApi)await apiPost({action:'saveDay',date:currentDate,...body});else LS.set('cb:'+currentDate,body);});}
-async function saveLinks(){await withSave(async()=>{if(useApi)await apiPost({action:'saveLinks',links});else LS.set('cb:links',links);});}
+let saveQueue=Promise.resolve();
+function enqueue(fn){saveQueue=saveQueue.then(fn,fn);return saveQueue;}
+async function saveDay(){const snapshot={homework:JSON.parse(JSON.stringify(day.homework)),idioms:JSON.parse(JSON.stringify(day.idioms)),reminder:day.reminder},date=currentDate;return enqueue(()=>withSave(async()=>{if(useApi)await apiPost({action:'saveDay',date,...snapshot});else LS.set('cb:'+date,snapshot);}));}
+async function saveLinks(){const snap=JSON.parse(JSON.stringify(links));return enqueue(()=>withSave(async()=>{if(useApi)await apiPost({action:'saveLinks',links:snap});else LS.set('cb:links',snap);}));}
 async function saveRoster(){if(useApi)await apiPost({action:'saveRoster',roster});else LS.set('cb:roster',roster);}
-async function saveAuditDate(date,a){await withSave(async()=>{if(useApi)await apiPost({action:'saveAudit',date,audit:a});else LS.set('cb:audit:'+date,a);});}
+async function saveAuditDate(date,a){const snap=JSON.parse(JSON.stringify(a));return enqueue(()=>withSave(async()=>{if(useApi)await apiPost({action:'saveAudit',date,audit:snap});else LS.set('cb:audit:'+date,snap);}));}
 async function saveAudit(){await saveAuditDate(currentDate,audit);}
 async function submitWork(rec){if(useApi)await apiPost({action:'submit',date:currentDate,...rec});else{const a=LS.get('cb:sub:'+currentDate)||[];a.push({...rec,ts:Date.now()});LS.set('cb:sub:'+currentDate,a);}}
 
